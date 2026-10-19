@@ -1,0 +1,518 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPU Instruction Cycle Simulator</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0b1020;
+  color: #f1f5f9;
+}
+
+header {
+  text-align: center;
+  padding: 28px 15px;
+  background: linear-gradient(120deg, #172554, #6d28d9);
+  border-bottom: 2px solid #38bdf8;
+}
+
+header h1 {
+  margin: 0 0 10px;
+  font-size: 28px;
+}
+
+header p {
+  margin: 0;
+  color: #dbeafe;
+}
+
+.container {
+  max-width: 1100px;
+  margin: auto;
+  padding: 22px;
+}
+
+.panel {
+  background: #151d32;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 25px #0003;
+}
+
+h2 {
+  color: #67e8f9;
+  margin-top: 0;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  color: #cbd5e1;
+}
+
+input, select {
+  width: 100%;
+  padding: 11px;
+  border-radius: 8px;
+  border: 1px solid #475569;
+  background: #0b1020;
+  color: white;
+  font-size: 15px;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+button {
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  background: #06b6d4;
+  color: #082f49;
+}
+
+button:hover {
+  filter: brightness(1.15);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.secondary {
+  background: #334155;
+  color: white;
+}
+
+.stages {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.stage {
+  text-align: center;
+  padding: 20px 10px;
+  border: 1px solid #475569;
+  border-radius: 12px;
+  background: #0f172a;
+  transition: 0.3s;
+}
+
+.stage .number {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  background: #334155;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.stage p {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.stage.active {
+  border: 2px solid #22d3ee;
+  background: #164e63;
+  transform: translateY(-3px);
+  box-shadow: 0 0 18px #06b6d455;
+}
+
+.stage.done .number {
+  background: #16a34a;
+  color: white;
+}
+
+.progress {
+  height: 9px;
+  background: #334155;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 18px 0;
+}
+
+#progressBar {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #06b6d4, #a78bfa);
+  transition: width 0.4s;
+}
+
+.registers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.register {
+  background: #0b1020;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 15px;
+}
+
+.register span {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.register strong {
+  display: block;
+  color: #a5f3fc;
+  font-size: 22px;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+
+#message {
+  padding: 15px;
+  border-radius: 9px;
+  background: #0b1020;
+  color: #e2e8f0;
+  line-height: 1.6;
+  min-height: 65px;
+}
+
+#log {
+  padding-left: 22px;
+  line-height: 1.9;
+  color: #cbd5e1;
+}
+
+footer {
+  text-align: center;
+  padding: 22px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+@media(max-width: 600px) {
+  .stages {
+    grid-template-columns: 1fr;
+  }
+  header h1 {
+    font-size: 23px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>⚡ CPU Instruction Cycle Simulator</h1>
+  <p>Explore how a CPU fetches, decodes and executes instructions</p>
+</header>
+
+<div class="container">
+
+  <section class="panel">
+    <h2>⚙️ Instruction Settings</h2>
+
+    <div class="controls">
+      <div>
+        <label for="instruction">Select Instruction</label>
+        <select id="instruction">
+          <option value="ADD">ADD (A + B)</option>
+          <option value="SUB">SUB (A - B)</option>
+          <option value="MUL">MUL (A × B)</option>
+          <option value="LOAD">LOAD (A into ACC)</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="valueA">Value A (0–999)</label>
+        <input id="valueA" type="number" min="0"
+               max="999" value="10">
+      </div>
+
+      <div>
+        <label for="valueB">Value B (0–999)</label>
+        <input id="valueB" type="number" min="0"
+               max="999" value="5">
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button id="startBtn" onclick="startCycle()">
+        ▶ Start Simulation
+      </button>
+      <button id="nextBtn" onclick="nextStep()" disabled>
+        Next Step →
+      </button>
+      <button class="secondary" onclick="resetCycle()">
+        ↻ Reset
+      </button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>🔄 Instruction Cycle</h2>
+
+    <div class="stages">
+      <div class="stage" id="fetch">
+        <div class="number">1</div>
+        <h3>FETCH</h3>
+        <p>Get instruction from memory</p>
+      </div>
+
+      <div class="stage" id="decode">
+        <div class="number">2</div>
+        <h3>DECODE</h3>
+        <p>Understand the instruction</p>
+      </div>
+
+      <div class="stage" id="execute">
+        <div class="number">3</div>
+        <h3>EXECUTE</h3>
+        <p>Perform the operation</p>
+      </div>
+    </div>
+
+    <div class="progress">
+      <div id="progressBar"></div>
+    </div>
+
+    <div id="message" aria-live="polite">
+      Select an instruction and click Start Simulation.
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>💻 CPU Register Dashboard</h2>
+
+    <div class="registers">
+      <div class="register">
+        <span>Program Counter (PC)</span>
+        <strong id="pc">100</strong>
+      </div>
+
+      <div class="register">
+        <span>Instruction Register (IR)</span>
+        <strong id="ir">---</strong>
+      </div>
+
+      <div class="register">
+        <span>Register A</span>
+        <strong id="regA">10</strong>
+      </div>
+
+      <div class="register">
+        <span>Register B</span>
+        <strong id="regB">5</strong>
+      </div>
+
+      <div class="register">
+        <span>Accumulator (ACC)</span>
+        <strong id="acc">0</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>📋 Execution Log</h2>
+    <ol id="log">
+      <li>Waiting for simulation to start...</li>
+    </ol>
+  </section>
+
+</div>
+
+<footer>
+  COA Micro Project | CPU Instruction Cycle
+  <br>Fetch → Decode → Execute
+</footer>
+
+<script>
+let step = 0;
+let a = 10;
+let b = 5;
+let operation = "ADD";
+let accumulator = 0;
+let pc = 100;
+let finished = false;
+
+const descriptions = [
+  "",
+  "FETCH: The CPU fetches the instruction from memory at address 100 and places it in the Instruction Register (IR).",
+  "DECODE: The Control Unit identifies the instruction and understands which operation must be performed.",
+  ""
+];
+
+function startCycle() {
+  const inputA = document.getElementById("valueA");
+  const inputB = document.getElementById("valueB");
+
+  a = Number(inputA.value);
+  b = Number(inputB.value);
+  operation = document.getElementById("instruction").value;
+
+  if (
+    inputA.value.trim() === "" ||
+    inputB.value.trim() === "" ||
+    !Number.isInteger(a) ||
+    !Number.isInteger(b) ||
+    a < 0 || a > 999 ||
+    b < 0 || b > 999
+  ) {
+    alert("Enter whole numbers from 0 to 999.");
+    return;
+  }
+
+  step = 0;
+  accumulator = 0;
+  pc = 100;
+  finished = false;
+
+  document.getElementById("ir").textContent = "---";
+  document.getElementById("acc").textContent = "0";
+  document.getElementById("pc").textContent = "100";
+  document.getElementById("regA").textContent = a;
+  document.getElementById("regB").textContent = b;
+  document.getElementById("log").innerHTML = "";
+
+  document.getElementById("instruction").disabled = true;
+  inputA.disabled = true;
+  inputB.disabled = true;
+  document.getElementById("startBtn").disabled = true;
+  document.getElementById("nextBtn").disabled = false;
+
+  updateDisplay();
+  document.getElementById("message").textContent =
+    "Ready! Click Next Step to begin the instruction cycle.";
+}
+
+function nextStep() {
+  if (finished || step >= 3) return;
+
+  step++;
+
+  const log = document.getElementById("log");
+  const item = document.createElement("li");
+
+  if (step === 1) {
+    document.getElementById("ir").textContent = operation;
+    item.textContent =
+      "FETCH: Instruction " + operation +
+      " is fetched from memory address " + pc + ".";
+    document.getElementById("message").textContent =
+      descriptions[1];
+  }
+
+  else if (step === 2) {
+    item.textContent =
+      "DECODE: The Control Unit decodes " + operation +
+      " and prepares the required registers.";
+    document.getElementById("message").textContent =
+      descriptions[2];
+  }
+
+  else if (step === 3) {
+    if (operation === "ADD") accumulator = a + b;
+    if (operation === "SUB") accumulator = a - b;
+    if (operation === "MUL") accumulator = a * b;
+    if (operation === "LOAD") accumulator = a;
+
+    pc = pc + 1;
+
+    item.textContent =
+      "EXECUTE: " + operation + " completed. ACC = " +
+      accumulator + ". PC moves to " + pc + ".";
+
+    document.getElementById("message").textContent =
+      "EXECUTE: Result = " + accumulator +
+      ". The result is stored in the Accumulator (ACC). " +
+      "The instruction cycle is complete.";
+    
+    document.getElementById("acc").textContent = accumulator;
+    document.getElementById("pc").textContent = pc;
+
+    finished = true;
+    document.getElementById("nextBtn").disabled = true;
+    document.getElementById("startBtn").disabled = false;
+    document.getElementById("instruction").disabled = false;
+    document.getElementById("valueA").disabled = false;
+    document.getElementById("valueB").disabled = false;
+  }
+
+  log.appendChild(item);
+  updateDisplay();
+}
+
+function updateDisplay() {
+  const ids = ["fetch", "decode", "execute"];
+
+  ids.forEach((id, index) => {
+    const card = document.getElementById(id);
+    card.classList.remove("active", "done");
+
+    if (index + 1 < step) {
+      card.classList.add("done");
+    } else if (index + 1 === step) {
+      card.classList.add("active");
+    }
+  });
+
+  document.getElementById("progressBar").style.width =
+    (step / 3 * 100) + "%";
+}
+
+function resetCycle() {
+  step = 0;
+  finished = false;
+
+  document.getElementById("instruction").disabled = false;
+  document.getElementById("valueA").disabled = false;
+  document.getElementById("valueB").disabled = false;
+  document.getElementById("startBtn").disabled = false;
+  document.getElementById("nextBtn").disabled = true;
+
+  document.getElementById("pc").textContent = "100";
+  document.getElementById("ir").textContent = "---";
+  document.getElementById("acc").textContent = "0";
+  document.getElementById("regA").textContent =
+    document.getElementById("valueA").value || "0";
+  document.getElementById("regB").textContent =
+    document.getElementById("valueB").value || "0";
+
+  document.getElementById("log").innerHTML =
+    "<li>Waiting for simulation to start...</li>";
+
+  document.getElementById("message").textContent =
+    "Select an instruction and click Start Simulation.";
+
+  updateDisplay();
+}
+</script>
+
+</body>
+</html>
